@@ -1,0 +1,3 @@
+# MPCR Mapping Stats Pipeline
+This is a nextflow pipeline for some basic stats extracted from the mapped bams.
+Coverages etc...
