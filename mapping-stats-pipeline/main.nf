@@ -85,7 +85,7 @@ process Concatenate_bams {
   file(bais) from baiFiles2.toList()
 
   output:
-  set file("all_samples.bam"), file("all_samples.bai") into all_samples_bam
+  set file("all_samples.bam"), file("all_samples.bam.bai") into all_samples_bam
 
   script:
   input_bams = bams.collect{"-in $it"}.join(' ')
@@ -94,6 +94,7 @@ process Concatenate_bams {
   set -e -o pipefail
   mkdir -p temp
   bamtools merge ${input_bams} | bamtools sort -out all_samples.bam
+  bamtools index -in all_samples.bam
   """
 }
 
@@ -138,13 +139,13 @@ process Ontarget_hits {
   set file(allsamplesbam), file(allsamplesbai) from all_samples_bam1
 
   output:
-  set file("ontarget_reads.bed"), file("ontarget_reads_stats.txt") into ontarget_reads
+  set file("ontarget_reads.bam"), file("ontarget_reads_stats.txt") into ontarget_reads
 
   """  
   set -e -o pipefail
   mkdir -p temp
-  bedtools intersect -a $allsamplesbam -b ${params.mapping_targets_bed} > ontarget_reads.bed
-  bedtools stats ontarget_reads.bed > ontarget_reads_stats.txt
+  bedtools intersect -a $allsamplesbam -b ${params.mapping_targets_bed} > ontarget_reads.bam
+  bamtools stats -in ontarget_reads.bam > ontarget_reads_stats.txt
   """
 }
 
@@ -163,13 +164,13 @@ process Offsite_hits {
   set file(allsamplesbam), file(allsamplesbai) from all_samples_bam2
 
   output:
-  set file("off_target_reads.bed"), file("off_target_reads_stats.txt") into offtarget_reads
+  set file("off_target_reads.bam"), file("off_target_reads_stats.txt") into offtarget_reads
 
   """  
   set -e -o pipefail
   mkdir -p temp
-  bedtools subtract -A -a $allsamplesbam -b ${params.mapping_targets_bed} > off_target_reads.bed
-  bedtools stats off_target_reads.bed > off_target_reads_stats.txt
+  bedtools subtract -A -a $allsamplesbam -b ${params.mapping_targets_bed} > off_target_reads.bam
+  bamtools stats -in off_target_reads.bam > off_target_reads_stats.txt
   """
 }
 
