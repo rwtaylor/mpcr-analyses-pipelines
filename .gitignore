@@ -35,5 +35,15 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
+# Mac cruft
 .DS_Store
-.DS_Store
+
+
+# Nextflow output
+outputs
+trace.txt
+pipeline.png
+timeline.html
+.nextflow
+.nextflow.log
+work
