@@ -97,7 +97,7 @@ if (params.bam_files_path == null) {
     tag "${params.output_prefix}-${sampleID}"
 
     cpus 2
-    memory { task.cpus * 4.GB }
+    memory { task.attempt == 1 ? task.cpus * 1.GB: task.cpus * 4.GB }
     time { 6.h }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
     maxRetries 5
