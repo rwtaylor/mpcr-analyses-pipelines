@@ -41,7 +41,8 @@ vignettes/*.pdf
 # SLURM
 slurm*
 
-# Nextflow output
+# Nextflow output & config
+nextflow.config
 outputs
 trace.txt*
 pipeline.png*
