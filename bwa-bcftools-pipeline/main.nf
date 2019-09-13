@@ -23,6 +23,8 @@ if (params.bam_files_path == null) {
     [fastq_ID[0][1], reads]
   }
 
+  fastqFiles = fastqFiles.view()
+
   // Update FileID with SampleID if lookup file was given in config
   if(params.sample_name_file != null){
     // Get sample info data
@@ -39,6 +41,7 @@ if (params.bam_files_path == null) {
     }
   }
 
+  fastqFiles = fastqFiles.view()
   ///////////////////////////////////////////////////////////////////////////////
   /* Trimming */
 
