@@ -38,12 +38,14 @@ vignettes/*.pdf
 # Mac cruft
 .DS_Store
 
+# SLURM
+slurm*
 
 # Nextflow output
 outputs
-trace.txt
-pipeline.png
-timeline.html
+trace.txt*
+pipeline.png*
+timeline.html*
 .nextflow
-.nextflow.log
+.nextflow.log*
 work
