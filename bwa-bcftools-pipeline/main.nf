@@ -23,8 +23,6 @@ if (params.bam_files_path == null) {
     [fastq_ID[0][1], reads]
   }
 
-  fastqFiles = fastqFiles.view()
-
   // Update FileID with SampleID if lookup file was given in config
   if(params.sample_name_file != null){
     // Get sample info data
@@ -41,7 +39,6 @@ if (params.bam_files_path == null) {
     }
   }
 
-  fastqFiles = fastqFiles.view()
   ///////////////////////////////////////////////////////////////////////////////
   /* Trimming */
 
@@ -55,10 +52,6 @@ if (params.bam_files_path == null) {
 
       cpus 1
       memory { task.cpus * 4.GB }
-      time { 6.h }
-      errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-      maxRetries 5
-      maxErrors '-1'
     
       input:
       set sampleID, reads from fastqFiles
@@ -94,17 +87,14 @@ trimmedFastqs = trimmedFastqs.view()
 ///////////////////////////////////////////////////////////////////////////////
 /* Mapping */
 
-if (params.bam_files_path == null) {
+if (!params.bam_files_path) {
+  print "RUNNING BWA"
   process Mapping_bwa {
     publishDir path:"${params.publish_directory}/bams", mode: "copy", overwrite: true
     tag "${params.output_prefix}-${sampleID}"
 
     cpus 2
-    memory { task.attempt == 1 ? task.cpus * 1.GB: task.cpus * 4.GB }
-    time { 6.h }
-    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
-    maxRetries 5
-    maxErrors '-1'
+    memory { task.cpus * 4.GB }
 
     input:
     set sampleID, file(reads) from trimmedFastqs
@@ -128,6 +118,8 @@ if (params.bam_files_path == null) {
 }
 
 mappedBams = mappedBams.view()
+
+mappedBams.ifEmpty { error "Bams failure" }
 
 ///////////////////////////////////////////////////////////////////////////////
 /* Pileup & call */
@@ -212,7 +204,7 @@ if (params.whole_genome && params.regions) {
     publishDir path:"${params.publish_directory}/vcfs", mode: "copy", overwrite: true
 
     cpus {  task.attempt == 1 ? 8: 16  }
-    memory { task.attempt == 1 ? 30.GB: 48.GB }
+    memory { task.attempt == 1 ? 96.GB: 192.GB }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
     maxRetries 2
     maxErrors '-1'
