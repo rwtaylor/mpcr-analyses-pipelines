@@ -40,7 +40,8 @@ if (!params.bam_files_path) {
     fastqFiles = fastqFiles.ifEmpty { error "Fastq files renaming failure" }
   }
 
-
+ 
+ 
   ///////////////////////////////////////////////////////////////////////////////
   /* Trimming */
 
@@ -54,6 +55,10 @@ if (!params.bam_files_path) {
 
       cpus 1
       memory { task.cpus * 4.GB }
+      time { 6.h }
+      errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+      maxRetries 5
+      maxErrors '-1'
     
       input:
       set sampleID, reads from fastqFiles
@@ -96,7 +101,11 @@ if (!params.bam_files_path) {
     tag "${params.output_prefix}-${sampleID}"
 
     cpus 2
-    memory { task.cpus * 4.GB }
+    memory { task.attempt == 1 ? task.cpus * 1.GB: task.cpus * 4.GB }
+    time { 6.h }
+    errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
+    maxRetries 5
+    maxErrors '-1'
 
     input:
     set sampleID, file(reads) from trimmedFastqs
@@ -122,7 +131,8 @@ if (!params.bam_files_path) {
 mappedBams = mappedBams.view()
 mappedBams = mappedBams.ifEmpty { error "Bams failure" }
 
-mappedBams.ifEmpty { error "Bams failure" }
+mappedBams.into { targetBams; wgBams}
+bamIndexes.into { targetBamIndexes; wgBamIndexes}
 
 ///////////////////////////////////////////////////////////////////////////////
 /* Pileup & call */
@@ -144,8 +154,8 @@ if (params.targets) {
 
     input:
     file(regions_file) from target_regions_file
-    file(bams) from mappedBams.toList()
-    file(bais) from bamIndexes.toList()
+    file(bams) from targetBams.toList()
+    file(bais) from targetBamIndexes.toList()
 
     output:
     set file("${params.output_prefix}.targets.vcf.gz"), file("${params.output_prefix}.targets.vcf.gz.tbi") into target_vcf
@@ -187,8 +197,8 @@ if (params.whole_genome && params.regions) {
 
     input:
     region from regions
-    file(bams) from mappedBams.toList()
-    file(bais) from bamIndexes.toList()
+    file(bams) from wgBams.toList()
+    file(bais) from wgBamIndexes.toList()
 
     output:
     file("${params.output_prefix}.region.${region[0]}.vcf.gz") into region_vcfs
@@ -207,7 +217,7 @@ if (params.whole_genome && params.regions) {
     publishDir path:"${params.publish_directory}/vcfs", mode: "copy", overwrite: true
 
     cpus {  task.attempt == 1 ? 8: 16  }
-    memory { task.attempt == 1 ? 96.GB: 192.GB }
+    memory { task.attempt == 1 ? 30.GB: 48.GB }
     errorStrategy { task.exitStatus == 143 ? 'retry' : 'finish' }
     maxRetries 2
     maxErrors '-1'
