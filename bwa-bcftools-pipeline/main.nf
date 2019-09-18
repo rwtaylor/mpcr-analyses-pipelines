@@ -8,23 +8,23 @@
 
 */
 
-if (params.bam_files_path == null) {
+if (!params.bam_files_path) {
 
   // Add fastq files to the fastqFiles channel
   fastqFiles = Channel
       .fromFilePairs( params.fastq_files_path, size: -1 )
       .ifEmpty { error "Cannot find any reads matching: ${params.fastq_files_path}" }
 
-  fastqFiles = fastqFiles.view()
-
   // Extract FileIDs from file names. This uses a regex defined in the nextflow.config file
   fastqFiles = fastqFiles.map{ file_name, reads ->
     fastq_ID = file_name =~ params.regex_fastq_ID
     [fastq_ID[0][1], reads]
   }
+  fastqFiles = fastqFiles.view()
+  fastqFiles = fastqFiles.ifEmpty { error "Fastq files sample regex failure" }
 
   // Update FileID with SampleID if lookup file was given in config
-  if(params.sample_name_file != null){
+  if(params.sample_name_file){
     // Get sample info data
     sample_file = file("${params.sample_name_file}")
     sample_info = Channel.from(sample_file.readLines())
@@ -35,9 +35,11 @@ if (params.bam_files_path == null) {
 
     // Update FileIDs with SampleIDs
     fastqFiles = fastqFiles.phase(sample_info).map {fq, si ->
-      [si[1], fq[1], fq[2]]
+      fq[2]? [si[1], fq[1], fq[2]] : [si[1], fq[1]]
     }
+    fastqFiles = fastqFiles.ifEmpty { error "Fastq files renaming failure" }
   }
+
 
   ///////////////////////////////////////////////////////////////////////////////
   /* Trimming */
@@ -77,18 +79,18 @@ if (params.bam_files_path == null) {
 
   } else {
 
-      trimmedFastqs = fastqFiles
+      fastqFiles.set { trimmedFastqs }
 
   }
 }
 
 trimmedFastqs = trimmedFastqs.view()
+trimmedFastqs = trimmedFastqs.ifEmpty { error "trimmed Fastqs failure" }
 
 ///////////////////////////////////////////////////////////////////////////////
 /* Mapping */
 
 if (!params.bam_files_path) {
-  print "RUNNING BWA"
   process Mapping_bwa {
     publishDir path:"${params.publish_directory}/bams", mode: "copy", overwrite: true
     tag "${params.output_prefix}-${sampleID}"
@@ -118,6 +120,7 @@ if (!params.bam_files_path) {
 }
 
 mappedBams = mappedBams.view()
+mappedBams = mappedBams.ifEmpty { error "Bams failure" }
 
 mappedBams.ifEmpty { error "Bams failure" }
 
